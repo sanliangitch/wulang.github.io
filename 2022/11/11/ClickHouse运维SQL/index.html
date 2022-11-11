@@ -1,0 +1,797 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/avatar.png">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Wu Lang">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="常用运维SQL语句 当前连接数   CH 对外暴露的原生接口分为 TCP 和 HTTP 两类，通过 system.metrics 即可查询当前的 TCP、HTTP 与内部副本的连接数。  123SELECT *FROM system.metricsWHERE metric LIKE &amp;#x27;%Connection&amp;#x27;  当前正在执行的查询  通过 system.processes 可以">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ClickHouse运维SQL">
+<meta property="og:url" content="https://wulangcode.github.io/2022/11/11/ClickHouse%E8%BF%90%E7%BB%B4SQL/index.html">
+<meta property="og:site_name" content="WuLang">
+<meta property="og:description" content="常用运维SQL语句 当前连接数   CH 对外暴露的原生接口分为 TCP 和 HTTP 两类，通过 system.metrics 即可查询当前的 TCP、HTTP 与内部副本的连接数。  123SELECT *FROM system.metricsWHERE metric LIKE &amp;#x27;%Connection&amp;#x27;  当前正在执行的查询  通过 system.processes 可以">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-11-11T15:08:07.000Z">
+<meta property="article:modified_time" content="2022-11-11T15:10:49.854Z">
+<meta property="article:author" content="Wu Lang">
+<meta property="article:tag" content="ClickHouse">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>ClickHouse运维SQL - WuLang</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"wulangcode.github.io","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"JqfNcVR7h86MIMlp4LuIOhKM-gzGzoHsz","app_key":"t7z1TLA7eiaClq94xXNyxZFu","server_url":"https://jqfncvr7.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>WuLang</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="ClickHouse运维SQL"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-11 23:08" pubdate>
+          2022年11月11日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.2k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          35 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">ClickHouse运维SQL</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h3 id="常用运维SQL语句"><a href="#常用运维SQL语句" class="headerlink" title="常用运维SQL语句"></a>常用运维SQL语句</h3><ul>
+<li>当前连接数 </br><br>  CH 对外暴露的原生接口分为 TCP 和 HTTP 两类，通过 system.metrics 即可查询当前的 TCP、HTTP 与内部副本的连接数。</li>
+</ul>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">SELECT</span> *<br><span class="hljs-keyword">FROM</span> <span class="hljs-keyword">system</span>.metrics<br><span class="hljs-keyword">WHERE</span> metric <span class="hljs-keyword">LIKE</span> <span class="hljs-string">&#x27;%Connection&#x27;</span><br></code></pre></td></tr></table></figure>
+<ul>
+<li>当前正在执行的查询</br><br>  通过 system.processes 可以查询目前正在执行的查询</li>
+</ul>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">SELECT</span> <br>    query_id, <br>    <span class="hljs-keyword">user</span>, <br>    address, <br>    query<br><span class="hljs-keyword">FROM</span> <span class="hljs-keyword">system</span>.processes<br><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> query_id <span class="hljs-keyword">ASC</span><br></code></pre></td></tr></table></figure>
+<ul>
+<li>终止查询</br><br>  通过 KILL QUERY 语句，可以终止正在执行的查询</li>
+</ul>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs powershell"><span class="hljs-built_in">KILL</span> QUERY <span class="hljs-built_in">WHERE</span> query_id = <span class="hljs-string">&#x27;query_id&#x27;</span><br></code></pre></td></tr></table></figure>
+<ul>
+<li>查询ALTER DELETE 和 ALTER UPDATE</br><br>  对于 Mutation 操作， ClickHouse 专门提供了 system.mutations 用于查询</li>
+</ul>
+<figure class="highlight autohotkey"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs autohotkey">SELECT <br><span class="hljs-built_in">    database,</span> <br><span class="hljs-built_in">    table,</span> <br><span class="hljs-built_in">    mutation_id,</span> <br><span class="hljs-built_in">    command,</span> <br><span class="hljs-built_in">    create_time,</span> <br>    is_done<br>FROM system.mutations<br></code></pre></td></tr></table></figure>
+<ul>
+<li>存储空间统计</br><br>  查询 CH 各个存储路径的空间</li>
+</ul>
+<figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs pgsql"><span class="hljs-keyword">SELECT</span> <br>    <span class="hljs-type">name</span>, <br>    <span class="hljs-type">path</span>, <br>    formatReadableSize(free_space) <span class="hljs-keyword">AS</span> free, <br>    formatReadableSize(total_space) <span class="hljs-keyword">AS</span> total, <br>    formatReadableSize(keep_free_space) <span class="hljs-keyword">AS</span> reserved<br><span class="hljs-keyword">FROM</span> <span class="hljs-keyword">system</span>.disks<br></code></pre></td></tr></table></figure>
+<ul>
+<li>各数据库占用空间统计</li>
+</ul>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">SELECT</span> <br>    <span class="hljs-keyword">database</span>, <br>    formatReadableSize(<span class="hljs-built_in">sum</span>(bytes_on_disk)) <span class="hljs-keyword">AS</span> on_disk<br><span class="hljs-keyword">FROM</span> <span class="hljs-keyword">system</span>.parts<br><span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> <span class="hljs-keyword">database</span><br></code></pre></td></tr></table></figure>
+<ul>
+<li>个列字段占用空间统计</li>
+</ul>
+<figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs pgsql"><span class="hljs-keyword">SELECT</span> <br>    <span class="hljs-keyword">database</span>, <br>    <span class="hljs-keyword">table</span>, <br>    <span class="hljs-keyword">column</span>, <br>    <span class="hljs-keyword">any</span>(<span class="hljs-keyword">type</span>), <br>    sum(column_data_compressed_bytes) <span class="hljs-keyword">AS</span> compressed, <br>    sum(column_data_uncompressed_bytes) <span class="hljs-keyword">AS</span> uncompressed, <br>    round(uncompressed / compressed, <span class="hljs-number">2</span>) <span class="hljs-keyword">AS</span> ratio, <br>    compressed / sum(<span class="hljs-keyword">rows</span>) <span class="hljs-keyword">AS</span> bpr, <br>    sum(<span class="hljs-keyword">rows</span>)<br><span class="hljs-keyword">FROM</span> <span class="hljs-keyword">system</span>.parts_columns<br><span class="hljs-keyword">WHERE</span> active <span class="hljs-keyword">AND</span> <span class="hljs-keyword">database</span> != <span class="hljs-string">&#x27;system&#x27;</span><br><span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span> <br>    <span class="hljs-keyword">database</span>, <br>    <span class="hljs-keyword">table</span>, <br>    <span class="hljs-keyword">column</span><br><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> <br>    <span class="hljs-keyword">database</span> <span class="hljs-keyword">ASC</span>, <br>    <span class="hljs-keyword">table</span> <span class="hljs-keyword">ASC</span>, <br>    <span class="hljs-keyword">column</span> <span class="hljs-keyword">ASC</span><br></code></pre></td></tr></table></figure>
+<ul>
+<li>慢查询</li>
+</ul>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">SELECT</span> <br>    <span class="hljs-keyword">user</span>, <br>    client_hostname <span class="hljs-keyword">AS</span> host, <br>    client_name <span class="hljs-keyword">AS</span> client, <br>    formatDateTime(query_start_time, <span class="hljs-string">&#x27;%T&#x27;</span>) <span class="hljs-keyword">AS</span> started, <br>    query_duration_ms / <span class="hljs-number">1000</span> <span class="hljs-keyword">AS</span> sec, <br>    <span class="hljs-built_in">round</span>(memory_usage / <span class="hljs-number">1048576</span>) <span class="hljs-keyword">AS</span> MEM_MB, <br>    result_rows <span class="hljs-keyword">AS</span> RES_CNT, <br>    result_bytes / <span class="hljs-number">1048576</span> <span class="hljs-keyword">AS</span> RES_MB, <br>    read_rows <span class="hljs-keyword">AS</span> R_CNT, <br>    <span class="hljs-built_in">round</span>(read_bytes / <span class="hljs-number">1048576</span>) <span class="hljs-keyword">AS</span> R_MB, <br>    written_rows <span class="hljs-keyword">AS</span> W_CNT, <br>    <span class="hljs-built_in">round</span>(written_bytes / <span class="hljs-number">1048576</span>) <span class="hljs-keyword">AS</span> W_MB, <br>    query<br><span class="hljs-keyword">FROM</span> <span class="hljs-keyword">system</span>.query_log<br><span class="hljs-keyword">WHERE</span> <span class="hljs-built_in">type</span> = <span class="hljs-number">2</span><br><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> query_duration_ms <span class="hljs-keyword">DESC</span><br><span class="hljs-keyword">LIMIT</span> <span class="hljs-number">10</span><br></code></pre></td></tr></table></figure>
+<ul>
+<li>副本预警监控</br></li>
+</ul>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">SELECT database, table, is_leader, total_replicas, active_replicas <br>  FROM system.replicas <br> WHERE is_readonly <br>    <span class="hljs-keyword">OR </span>is_session_expired <br>    <span class="hljs-keyword">OR </span>future_parts &gt; <span class="hljs-number">30</span> <br>    <span class="hljs-keyword">OR </span>parts_to_check &gt; <span class="hljs-number">20</span> <br>    <span class="hljs-keyword">OR </span>queue_size &gt; <span class="hljs-number">30</span> <br>    <span class="hljs-keyword">OR </span><span class="hljs-keyword">inserts_in_queue </span>&gt; <span class="hljs-number">20</span> <br>    <span class="hljs-keyword">OR </span>log_max_index - log_pointer &gt; <span class="hljs-number">20</span> <br>    <span class="hljs-keyword">OR </span>total_replicas &lt; <span class="hljs-number">2</span> <br>    <span class="hljs-keyword">OR </span>active_replicas &lt; total_replicas<br></code></pre></td></tr></table></figure>
+<h3 id="解决数据一致性"><a href="#解决数据一致性" class="headerlink" title="解决数据一致性"></a>解决数据一致性</h3><ul>
+<li>一种是在写入数据后，立刻通过</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs sql">OPTIMIZE <span class="hljs-keyword">TABLE</span> <span class="hljs-keyword">PARTITION</span> part <span class="hljs-keyword">FINAL</span><br>eg：optimize <span class="hljs-keyword">table</span> sic_member_middle_label <span class="hljs-keyword">final</span>;<br></code></pre></td></tr></table></figure>
+<p>强制触发新写入分区的合并动作。</p>
+<ul>
+<li>一种是通过 GROUP BY 查询 + 过滤实现。argMax 函数登场</br><br>argMax 函数的参数如下所示，它能够按照 field2 的最大值取 field1 的值。<figure class="highlight reasonml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs reasonml">arg<span class="hljs-constructor">Max(<span class="hljs-params">field1</span>，<span class="hljs-params">field2</span>)</span><br></code></pre></td></tr></table></figure></li>
+<li>还有一种是通过 FINAL 查询实现，即在查询语句后增加 FINAL 修饰符，这样在查询的过程中将会执行 Merge 的特殊逻辑(例如数据去重，预聚合等)。</li>
+</ul>
+<h3 id="如何在-ClickHouse-中避免深度分页问题"><a href="#如何在-ClickHouse-中避免深度分页问题" class="headerlink" title="如何在 ClickHouse 中避免深度分页问题"></a>如何在 ClickHouse 中避免深度分页问题</h3><figure class="highlight abnf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs abnf">在SQL最后加入：<br>settings distributed_group_by_no_merge <span class="hljs-operator">=</span> <span class="hljs-number">1</span><br></code></pre></td></tr></table></figure>
+
+<h3 id="利用Null引擎和物化视图构建数据管道"><a href="#利用Null引擎和物化视图构建数据管道" class="headerlink" title="利用Null引擎和物化视图构建数据管道"></a><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzA4MDIwNTY4MQ==&mid=2247484250&idx=1&sn=4c2a9938afc2024287364bbe2d9be1de&chksm=9fa68144a8d10852fd6692a676a43c826b250384bf71828ab58269fd3424e353db51ffb0f1c0&cur_album_id=1342290453848326144&scene=190#rd">利用Null引擎和物化视图构建数据管道</a></h3><p>首先新建一张结果表，这是最终面向业务查询的表，使用 AggregatingMergeTree 表引擎:</p>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">CREATE</span> TABLE ch_label_string(<br>  labelname <span class="hljs-keyword">String</span>,<br>  labelvalue <span class="hljs-keyword">String</span>,<br>  uv AggregateFunction(groupBitmap,UInt64)<br>  <br>)ENGINE = AggregatingMergeTree()<br><span class="hljs-keyword">ORDER</span> <span class="hljs-keyword">BY</span> (labelname,labelvalue)<br><span class="hljs-keyword">PARTITION</span> <span class="hljs-keyword">BY</span> labelname<br></code></pre></td></tr></table></figure>
+<p>其中 uv 字段是 AggregateFunction(groupBitmap,UInt64) 类型。</p>
+<p>接着用 Null 引擎新建一张和 ch_label_string 一样的镜像表:</p>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">CREATE</span> TABLE ch_label_string_null(<br>  labelname <span class="hljs-keyword">String</span>,<br>  labelvalue <span class="hljs-keyword">String</span>,<br>  uv UInt64<br>) Engine = <span class="hljs-literal">Null</span>;<br></code></pre></td></tr></table></figure>
+<p>在这张表中，uv 字段使用普通的 UInt64。</p>
+<p>Null 引擎和 Unix 系统的空设备 &#x2F;dev&#x2F;null 很像，向它写入的数据都会被丢弃掉。</p>
+<p>接着重头戏来了，新建一张物化视图:</p>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MATERIALIZED</span> <span class="hljs-keyword">VIEW</span> ch_label_string_queue <span class="hljs-keyword">TO</span> ch_label_string <span class="hljs-keyword">AS</span><br><span class="hljs-keyword">SELECT</span><br>    labelname,<br>    labelvalue,<br>    groupBitmapState(uv) <span class="hljs-keyword">AS</span> uv<br><span class="hljs-keyword">FROM</span> ch_label_string_null<br><span class="hljs-keyword">GROUP</span> <span class="hljs-keyword">BY</span><br>    labelname,<br>    labelvalue<br></code></pre></td></tr></table></figure>
+<p>这里使用了如下的语法:</p>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">MATERIALIZED</span> <span class="hljs-keyword">VIEW</span> xxx <span class="hljs-keyword">TO</span> dest_table<br></code></pre></td></tr></table></figure>
+<p>这样一来，该物化视图的作用就如同数据管道一般，每当 ch_label_string_null<br>有数据写入，就会按照 SELECT 语句源源不断的把数据写入到 ch_label_string。</p>
+<p>在数据写入的时候，我们直接面向 ch_label_string_null 写入，并通过物化视图，直接将数据写入到了目标的 ch_label_string 这张表。</p>
+<p>而ch_label_string_null 由于是 Null 引擎，本身不会存储任何多余的数据。</p>
+<p>在数据查询的时候，我们则直接面向结果表  ch_label_string。</p>
+<h3 id="如何在ClickHouse中快速实现AB表切换"><a href="#如何在ClickHouse中快速实现AB表切换" class="headerlink" title="如何在ClickHouse中快速实现AB表切换"></a><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzA4MDIwNTY4MQ==&mid=2247484281&idx=1&sn=0c40e8d93c6f7981175e88d9abd7152c&chksm=9fa68167a8d1087115041e4b3755cb01e6b886ba5a01f91304e476395a7b0ee5a31b14225e30&cur_album_id=1342290453848326144&scene=190#rd">如何在ClickHouse中快速实现AB表切换</a></h3><ul>
+<li>第一种是利用 RENAME 语法</br></li>
+</ul>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs css">RENAME <span class="hljs-selector-tag">TABLE</span> <span class="hljs-selector-tag">A</span> <span class="hljs-selector-tag">TO</span> C, <span class="hljs-selector-tag">B</span> <span class="hljs-selector-tag">TO</span> <span class="hljs-selector-tag">A</span>, C <span class="hljs-selector-tag">TO</span> <span class="hljs-selector-tag">B</span><br></code></pre></td></tr></table></figure>
+<p> 虽然很方便，但也存在一定的风险，因为利用到了中间临时表，所以整个过程不是原子的，如果出现意外可能会导致不一致的情况发生，于是 ClickHouse 提供了第二种方式。</p>
+<ul>
+<li>第二种是利用 EXCHANGE TABLES 语法<br>首先新建一个 Atomic 数据库</li>
+</ul>
+<figure class="highlight n1ql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs n1ql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">DATABASE</span> test_atom ENGINE = Atomic<br></code></pre></td></tr></table></figure>
+<p>直接用 EXCHANGE TABLES 交换两张表，这个操作是原子的。</p>
+<figure class="highlight abnf"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs abnf">EXCHANGE TABLES test_atom.目标表 AND test_atom.原来表<span class="hljs-comment">;</span><br></code></pre></td></tr></table></figure>
+<p>EXCHANGE TABLES 的原子性是利用了底层系统的 renameat2 命令。它只有至少在 linux kernel 3.15 的操作系统上才能支持。</p>
+<h3 id="String低基数字段优化"><a href="#String低基数字段优化" class="headerlink" title="String低基数字段优化"></a><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=MzA4MDIwNTY4MQ==&mid=2247483881&idx=1&sn=a3ce7924bfcce51ed38ce1d2bd7c4518&chksm=9fa683f7a8d10ae1c0e22c9b61a9105fef011e56e2e2d53aa0992155f0ec7942ef25f6321287&cur_album_id=1342290453848326144&scene=190#rd">String低基数字段优化</a></h3><p>  ClickHouse提供了一种修饰数据类型LowCardinality，专门针对低基数特征的字段进行优化。</p>
+<p>虽然LowCardinality的初衷是为了优化String，但是一不做二不休，LowCardinality目前还可以支持Int、Date和DateTime类型。</p>
+<p>(主要在String场景使用，优化效果更明显)</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs stylus"><span class="hljs-function"><span class="hljs-title">LowCardinality</span><span class="hljs-params">(String)</span></span><br><span class="hljs-function"><span class="hljs-title">LowCardinality</span><span class="hljs-params">(UInt32)</span></span><br><span class="hljs-function"><span class="hljs-title">LowCardinality</span><span class="hljs-params">(Date)</span></span><br></code></pre></td></tr></table></figure>
+<p>那么LowCardinality背后的原理是什么呢?  其实从StringWithDictionary的名字已经很明显了，它是通过字典压缩编码进行优化的。</p>
+<p>在默认的情况下，声明了LowCardinality的字段会基于数据生成一个全局字典，并利用倒排索引建立Key和位置的对应关系。如果数据的基数大于 8192，也就是说不同的值多于8192个，则会将一个全局字典拆分成多个局部字典(由 low_cardinality_max_dictionary_size 参数控制, 默认8192)。</p>
+<p>因为进一步使用了字典压缩，所以查询的IO压力变小了，这是一处优化; 其次在处理数据的某些场合，可以直接使用字典进行操作，不需要将数据全部展开。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/ClickHouse/" class="category-chain-item">ClickHouse</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/ClickHouse/">#ClickHouse</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>ClickHouse运维SQL</div>
+      <div>https://wulangcode.github.io/2022/11/11/ClickHouse运维SQL/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Wu Lang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年11月11日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/11/03/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E6%97%A5%E5%BF%97%E5%88%86%E6%9E%90/" title="G1垃圾回收器日志分析">
+                        <span class="hidden-mobile">G1垃圾回收器日志分析</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://lib.baomitu.com/valine/1.5.1/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"JqfNcVR7h86MIMlp4LuIOhKM-gzGzoHsz","appKey":"t7z1TLA7eiaClq94xXNyxZFu","path":"window.location.pathname","placeholder":null,"avatar":"retro","meta":["nick","mail","link"],"requiredFields":[],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

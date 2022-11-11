@@ -1,0 +1,828 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/avatar.png">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Wu Lang">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="[TOC] G1日志分析新生代 young GC 日志G1使用 -XX:PrintGCDetails打印出详细的垃圾收集日志 一、四个关键信息 新生代垃圾收集发生的时间——2016-12-12T10:40:18.811-0500，通过设置-XX:+PrintGCDateStamps参数可以打印出这个时间； JVM启动后的相对时间——25.959 这次收集的类型——新生代收集，只回收Eden分区 这">
+<meta property="og:type" content="article">
+<meta property="og:title" content="G1垃圾回收器日志分析">
+<meta property="og:url" content="https://wulangcode.github.io/2022/11/03/G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E6%97%A5%E5%BF%97%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="WuLang">
+<meta property="og:description" content="[TOC] G1日志分析新生代 young GC 日志G1使用 -XX:PrintGCDetails打印出详细的垃圾收集日志 一、四个关键信息 新生代垃圾收集发生的时间——2016-12-12T10:40:18.811-0500，通过设置-XX:+PrintGCDateStamps参数可以打印出这个时间； JVM启动后的相对时间——25.959 这次收集的类型——新生代收集，只回收Eden分区 这">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.imgur.com/C752vCd.jpg">
+<meta property="og:image" content="https://i.imgur.com/XjrIhnA.jpg">
+<meta property="og:image" content="https://i.imgur.com/65ua0ft.jpg">
+<meta property="og:image" content="https://i.imgur.com/bYnho4q.jpg">
+<meta property="og:image" content="https://i.imgur.com/PX6KMgo.jpg">
+<meta property="article:published_time" content="2022-11-03T14:30:25.000Z">
+<meta property="article:modified_time" content="2022-11-04T15:19:07.177Z">
+<meta property="article:author" content="Wu Lang">
+<meta property="article:tag" content="JVM">
+<meta property="article:tag" content="GC">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://i.imgur.com/C752vCd.jpg">
+  
+  
+  
+  <title>G1垃圾回收器日志分析 - WuLang</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"wulangcode.github.io","root":"/","version":"1.9.3","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"JqfNcVR7h86MIMlp4LuIOhKM-gzGzoHsz","app_key":"t7z1TLA7eiaClq94xXNyxZFu","server_url":"https://jqfncvr7.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>WuLang</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="G1垃圾回收器日志分析"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-11-03 22:30" pubdate>
+          2022年11月3日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          68 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">G1垃圾回收器日志分析</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>[TOC]</p>
+<h1 id="G1日志分析"><a href="#G1日志分析" class="headerlink" title="G1日志分析"></a>G1日志分析</h1><h2 id="新生代-young-GC-日志"><a href="#新生代-young-GC-日志" class="headerlink" title="新生代 young GC 日志"></a>新生代 young GC 日志</h2><p>G1使用 <code>-XX:PrintGCDetails</code>打印出详细的垃圾收集日志<br><img src="https://i.imgur.com/C752vCd.jpg" srcset="/img/loading.gif" lazyload alt="C752vCd"></p>
+<h3 id="一、四个关键信息"><a href="#一、四个关键信息" class="headerlink" title="一、四个关键信息"></a>一、四个关键信息</h3><ul>
+<li>新生代垃圾收集发生的时间——<strong>2016-12-12T10:40:18.811-0500</strong>，通过设置<code>-XX:+PrintGCDateStamps</code>参数可以打印出这个时间；</li>
+<li>JVM启动后的相对时间——<strong>25.959</strong></li>
+<li>这次收集的类型——新生代收集，只回收Eden分区</li>
+<li>这次收集花费的时间——<strong>0.0305171s，即30ms</strong></li>
+</ul>
+<h3 id="二、列出了新生代收集中并行收集的详细过程"><a href="#二、列出了新生代收集中并行收集的详细过程" class="headerlink" title="二、列出了新生代收集中并行收集的详细过程"></a>二、列出了新生代收集中并行收集的详细过程</h3><ul>
+<li><strong>Parallel Time</strong>：并行收集任务在运行过程中引发的STW（Stop The World）时间，从新生代垃圾收集开始到最后一个任务结束，共花费26.6ms</li>
+<li><strong>GC Workers</strong>：有4个线程负责垃圾收集，通过参数<code>-XX:ParallelGCThreads</code>设置，这个参数的值的设置，跟CPU有关，如果物理CPU支持的线程个数小于8，则最多设置为8；如果物理CPU支持的线程个数大于8，则默认值为number * 5&#x2F;8</li>
+<li><strong>GC Worker Start</strong>：第一个垃圾收集线程开始工作时JVM启动后经过的时间（min）；最后一个垃圾收集线程开始工作时JVM启动后经过的时间（max）；diff表示min和max之间的差值。理想情况下，你希望他们几乎是同时开始，即diff趋近于0。</li>
+<li><strong>Ext Root Scanning</strong>：扫描root集合（线程栈、JNI、全局变量、系统表等等）花费的时间，扫描root集合是垃圾收集的起点，尝试找到是否有root集合中的节点指向当前的收集集合（CSet）</li>
+<li><strong>Update RS(Remembered Set or RSet)<strong>：每个分区都有自己的RSet，用来记录其他分区指向当前分区的指针，如果RSet有更新，G1中会有一个post-write barrier管理跨分区的引用——新的被引用的card会被标记为dirty，并放入一个日志缓冲区，如果这个日志缓冲区满了会被加入到一个全局的缓冲区，在JVM运行的过程中还有线程在并发处理这个全局日志缓冲区的dirty card。</strong>Update RS</strong>表示允许垃圾收集线程处理本次垃圾收集开始前没有处理好的日志缓冲区，这可以确保当前分区的RSet是最新的。<ul>
+<li><strong>Processed Buffers</strong>，这表示在Update RS这个过程中处理多少个日志缓冲区。</li>
+</ul>
+</li>
+<li><strong>Scan RS</strong>：扫描每个新生代分区的RSet，找出有多少指向当前分区的引用来自CSet。</li>
+<li><strong>Code Root Scanning</strong>：扫描代码中的root节点（局部变量）花费的时间</li>
+<li><strong>Object Copy</strong>：在疏散暂停期间，所有在CSet中的分区必须被转移疏散，Object Copy就负责将当前分区中存活的对象拷贝到新的分区。</li>
+<li><strong>Termination</strong>：当一个垃圾收集线程完成任务时，它就会进入一个临界区，并尝试帮助其他垃圾线程完成任务（steal outstanding tasks），min表示该垃圾收集线程什么时候尝试terminatie，max表示该垃圾收集回收线程什么时候真正terminated。<ul>
+<li><strong>Termination Attempts</strong>：如果一个垃圾收集线程成功盗取了其他线程的任务，那么它会再次盗取更多的任务或再次尝试terminate，每次重新terminate的时候，这个数值就会增加。</li>
+</ul>
+</li>
+<li><strong>GC Worker Other</strong>：垃圾收集线程在完成其他任务的时间</li>
+<li><strong>GC Worker Total</strong>：展示每个垃圾收集线程的最小、最大、平均、差值和总共时间。</li>
+<li><strong>GC Worker End</strong>：min表示最早结束的垃圾收集线程结束时该JVM启动后的时间；max表示最晚结束的垃圾收集线程结束时该JVM启动后的时间。理想情况下，你希望它们快速结束，并且最好是同一时间结束。</li>
+</ul>
+<h3 id="三、列出了新生代GC中的一些任务："><a href="#三、列出了新生代GC中的一些任务：" class="headerlink" title="三、列出了新生代GC中的一些任务："></a>三、列出了新生代GC中的一些任务：</h3><ul>
+<li><strong>Code Root Fixup</strong> ：释放用于管理并行垃圾收集活动的数据结构，应该接近于0，该步骤是线性执行的；</li>
+<li><strong>Code Root Purge</strong>：清理更多的数据结构，应该很快，耗时接近于0，也是线性执行。</li>
+<li><strong>Clear CT</strong>：清理card table</li>
+</ul>
+<h3 id="四、包含一些扩展功能"><a href="#四、包含一些扩展功能" class="headerlink" title="四、包含一些扩展功能"></a>四、包含一些扩展功能</h3><ul>
+<li><strong>Choose CSet</strong>：选择要进行回收的分区放入CSet（G1选择的标准是垃圾最多的分区优先，也就是存活对象率最低的分区优先）</li>
+<li><strong>Ref Proc</strong>：处理Java中的各种引用——soft、weak、final、phantom、JNI等等。</li>
+<li><strong>Ref Enq</strong>：遍历所有的引用，将不能回收的放入pending列表</li>
+<li><strong>Redirty Card</strong>：在回收过程中被修改的card将会被重置为dirty</li>
+<li><strong>Humongous Register</strong>：JDK8u60提供了一个特性，巨型对象可以在新生代收集的时候被回收——通过<code>G1ReclaimDeadHumongousObjectsAtYoungGC</code> 设置，默认为true。</li>
+<li><strong>Humongous Reclaim</strong>：做下列任务的时间：确保巨型对象可以被回收、释放该巨型对象所占的分区，重置分区类型，并将分区还到free列表，并且更新空闲空间大小。</li>
+<li><strong>Free CSet</strong>：将要释放的分区还回到free列表。</li>
+</ul>
+<h3 id="五、展示了不同代的大小变化，以及堆大小的自适应调整。"><a href="#五、展示了不同代的大小变化，以及堆大小的自适应调整。" class="headerlink" title="五、展示了不同代的大小变化，以及堆大小的自适应调整。"></a>五、展示了不同代的大小变化，以及堆大小的自适应调整。</h3><ul>
+<li>**Eden:1097.0M(1097.0M)-&gt;0.0B(967.0M)**：（1）当前新生代收集触发的原因是Eden空间满了，分配了1097M，使用了1097M；（2）所有的Eden分区都被疏散处理了，在新生代结束后Eden分区的使用大小成为了0.0B；（3）Eden分区的大小缩小为967.0M</li>
+<li><strong>Survivors:13.0M-&gt;139.0M</strong>：由于年轻代分区的回收处理，survivor的空间从13.0M涨到139.0M；</li>
+<li>**Heap:1694.4M(2048.0M)-&gt;736.3M(2048.0M)**：（1）在本次垃圾收集活动开始的时候，堆空间整体使用量是1694.4M，堆空间的最大值是2048M；（2）在本次垃圾收集结束后，堆空间的使用量是763.4M，最大值保持不变。</li>
+</ul>
+<h3 id="六、展示了本次新生代垃圾收集的时间"><a href="#六、展示了本次新生代垃圾收集的时间" class="headerlink" title="六、展示了本次新生代垃圾收集的时间"></a>六、展示了本次新生代垃圾收集的时间</h3><ul>
+<li><strong>user&#x3D;0.8</strong>：垃圾收集线程在新生代垃圾收集过程中消耗的CPU时间，这个时间跟垃圾收集线程的个数有关，可能会比real time大很多；</li>
+<li><strong>sys&#x3D;0.0</strong>：内核态线程消耗的CPU时间</li>
+<li><strong>-real&#x3D;0.03</strong>：本次垃圾收集真正消耗的时间；</li>
+</ul>
+<h2 id="并发垃圾收集"><a href="#并发垃圾收集" class="headerlink" title="并发垃圾收集"></a>并发垃圾收集</h2><p>G1的第二种收集活动是并发垃圾收集，并发垃圾收集的触发条件有很多，但是做的工作都相同，它的日志如下图所示：</p>
+<p><img src="https://i.imgur.com/XjrIhnA.jpg" srcset="/img/loading.gif" lazyload alt="XjrIhnA"></p>
+<h3 id="一、标志着并发垃圾收集阶段的开始"><a href="#一、标志着并发垃圾收集阶段的开始" class="headerlink" title="一、标志着并发垃圾收集阶段的开始"></a>一、标志着并发垃圾收集阶段的开始</h3><ul>
+<li>**GC pause(G1 Evacuation Pause)(young)(initial-mark)**：为了充分利用STW的机会来trace所有可达（存活）的对象，initial-mark阶段是作为新生代垃圾收集中的一部分存在的（搭便车）。initial-mark设置了两个TAMS（top-at-mark-start）变量，用来区分存活的对象和在并发标记阶段新分配的对象。在TAMS之前的所有对象，在当前周期内都会被视作存活的。</li>
+</ul>
+<h3 id="二、表示第并发标记阶段做的第一个事情：根分区扫描"><a href="#二、表示第并发标记阶段做的第一个事情：根分区扫描" class="headerlink" title="二、表示第并发标记阶段做的第一个事情：根分区扫描"></a>二、表示第并发标记阶段做的第一个事情：根分区扫描</h3><ul>
+<li><strong>GC concurrent-root-region-scan-start</strong>：根分区扫描开始，根分区扫描主要扫描的是新的survivor分区，找到这些分区内的对象指向当前分区的引用，如果发现有引用，则做个记录；</li>
+<li><strong>GC concurrent-root-region-scan-end</strong>：根分区扫描结束，耗时0.0030613s</li>
+</ul>
+<h3 id="三、表示并发标记阶段"><a href="#三、表示并发标记阶段" class="headerlink" title="三、表示并发标记阶段"></a>三、表示并发标记阶段</h3><ul>
+<li><p><strong>GC Concurrent-mark-start</strong>：并发标记阶段开始。（1）并发标记阶段的线程是跟应用线程一起运行的，不会STW，所以称为并发；并发标记阶段的垃圾收集线程，默认值是Parallel Thread个数的25%，这个值也可以用参数<code>-XX:ConcGCThreads</code>设置；（2）trace整个堆，并使用位图标记所有存活的对象，因为在top TAMS之前的对象是隐式存活的，所以这里只需要标记出那些在top TAMS之后、阈值之前的；（3）记录在并发标记阶段的变更，G1这里使用了SATB算法，该算法要求在垃圾收集开始的时候给堆做一个快照，在垃圾收集过程中这个快照是不变的，但实际上肯定有些对象的引用会发生变化，这时候G1使用了pre-write barrier记录这种变更，并将这个记录存放在一个SATB缓冲区中，如果该缓冲区满了就会将它加入到一个全局的缓冲区，同时G1有一个线程在并行得处理这个全局缓冲区；（4）在并发标记过程中，会记录每个分区的存活对象占整个分区的大小的比率；</p>
+</li>
+<li><p><strong>GC Concurrent-mark-end</strong>：并发标记阶段结束，耗时0.3055438s</p>
+</li>
+</ul>
+<h3 id="四、重新标记阶段，会Stop-the-World"><a href="#四、重新标记阶段，会Stop-the-World" class="headerlink" title="四、重新标记阶段，会Stop the World"></a>四、重新标记阶段，会Stop the World</h3><ul>
+<li><strong>Finalize Marking</strong>：Finalizer列表里的Finalizer对象处理，耗时0.0014099s；</li>
+<li><strong>GC ref-proc</strong>：引用（soft、weak、final、phantom、JNI等等）处理，耗时0.0000480s；</li>
+<li><strong>Unloading</strong>：类卸载，耗时0.0025840s；</li>
+<li>除了前面这几个事情，这个阶段最关键的结果是：绘制出当前并发周期中整个堆的最后面貌，剩余的SATB缓冲区会在这里被处理，所有存活的对象都会被标记；</li>
+</ul>
+<h3 id="五、清理阶段，也会Stop-the-World"><a href="#五、清理阶段，也会Stop-the-World" class="headerlink" title="五、清理阶段，也会Stop the World"></a>五、清理阶段，也会Stop the World</h3><ul>
+<li>计算出最后存活的对象：标记出initial-mark阶段后分配的对象；标记出至少有一个存活对象的分区；</li>
+<li>为下一个并发标记阶段做准备，previous和next位图会被清理；</li>
+<li>没有存活对象的老年代分区和巨型对象分区会被释放和清理；</li>
+<li>处理没有任何存活对象的分区的RSet；</li>
+<li>所有的老年代分区会按照自己的存活率（存活对象占整个分区大小的比例）进行排序，为后面的CSet选择过程做准备；</li>
+</ul>
+<h3 id="六、并发清理阶段"><a href="#六、并发清理阶段" class="headerlink" title="六、并发清理阶段"></a>六、并发清理阶段</h3><ul>
+<li><strong>GC concurrent-cleanup-start</strong>：并发清理阶段启动。完成第5步剩余的清理工作；将完全清理好的分区加入到二级free列表，等待最终还会到总体的free列表；</li>
+<li><strong>GC concurrent-cleanup-end</strong>：并发清理阶段结束，耗时0.0012954s</li>
+</ul>
+<h2 id="混合收集"><a href="#混合收集" class="headerlink" title="混合收集"></a>混合收集</h2><p>在并发收集阶段结束后，你会看到混合收集阶段的日志，如下图所示，该日志的大部分跟之前讨论的新生代收集相同，只有第1部分不一样：<strong>GC pause(G1 Evacuation Pause)(mixed),0.0129474s</strong>，这一行表示这是一个混合垃圾收集周期；在混合垃圾收集处理的CSet不仅包括新生代的分区，还包括老年代分区——也就是并发标记阶段标记出来的那些老年代分区。<br><img src="https://i.imgur.com/65ua0ft.jpg" srcset="/img/loading.gif" lazyload alt="65ua0ft"></p>
+<h2 id="Full-GC"><a href="#Full-GC" class="headerlink" title="Full GC"></a>Full GC</h2><p>如果堆内存空间不足以分配新的对象，或者是Metasapce空间使用率达到了设定的阈值，那么就会触发Full GC——你在使用G1的时候应该尽量避免这种情况发生，因为G1的Full Gc是单线程、会Stop The World，代价非常高。Full GC的日志如下图所示，从中你可以看出三类信息</p>
+<ol>
+<li>Full GC的原因，这个图里是Allocation Failure，还有一个常见的原因是Metadata GC Threshold；</li>
+<li>Full GC发生的频率，每隔几天发生一次Full GC还可以接受，但是每隔1小时发生一次Full GC则不可接受；</li>
+<li>Full GC的耗时，这张图里的Full GC耗时150ms（PS：按照我的经验，实际运行中如果发生Full GC，耗时会比这个多很多）<br><img src="https://i.imgur.com/bYnho4q.jpg" srcset="/img/loading.gif" lazyload alt="bYnho4q"></li>
+</ol>
+<p>基础配置参数中，我这里还想介绍两个：<code>-XX:+PrintGCApplicationStoppedTime</code>和<code>-XX:+PrintGCApplicationConcurrentTime</code>，这两个参数也可以为你提供有用的信息，如下图所示：<br><img src="https://i.imgur.com/PX6KMgo.jpg" srcset="/img/loading.gif" lazyload alt="PX6KMgo"></p>
+<ol>
+<li>记录了应用线程在安全点被暂停的总时间（也就是STW的总时间）</li>
+<li>记录了让所有应用线程进入安全点所花费的总时间</li>
+<li>记录了在两个安全点之间应用线程运行的时间</li>
+</ol>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><code class="hljs stylus"><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.683</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.683</span>: <span class="hljs-selector-attr">[GC pause (G1 Humongous Allocation) (young) , 0.0255329 secs]</span>  <span class="hljs-comment">// young GC</span><br>   <span class="hljs-selector-attr">[Parallel Time: 21.5 ms, GC Workers: 1]</span>    <span class="hljs-comment">// 并行8个线程，耗时21.5ms</span><br>      <span class="hljs-selector-attr">[GC Worker Start (ms):  13004683.5]</span><br>      <span class="hljs-selector-attr">[Ext Root Scanning (ms):  14.3]</span>   <span class="hljs-comment">// 扫描 root 的线程耗时</span><br>      <span class="hljs-selector-attr">[Update RS (ms):  1.6]</span><br>         <span class="hljs-selector-attr">[Processed Buffers:  40]</span>   <span class="hljs-comment">// Processed Buffers就是记录引用变化的缓存空间</span><br>      <span class="hljs-selector-attr">[Scan RS (ms):  0.2]</span>   <span class="hljs-comment">// 扫描 RS</span><br>      <span class="hljs-selector-attr">[Code Root Scanning (ms):  0.2]</span>   <span class="hljs-comment">// 根扫描耗时</span><br>      <span class="hljs-selector-attr">[Object Copy (ms):  4.7]</span>   <span class="hljs-comment">// 对象拷贝</span><br>      <span class="hljs-selector-attr">[Termination (ms):  0.0]</span><br>         <span class="hljs-selector-attr">[Termination Attempts:  1]</span><br>      <span class="hljs-selector-attr">[GC Worker Other (ms):  0.0]</span><br>      <span class="hljs-selector-attr">[GC Worker Total (ms):  21.0]</span>   <span class="hljs-comment">// GC 线程耗时</span><br>      <span class="hljs-selector-attr">[GC Worker End (ms):  13004704.5]</span><br>   <span class="hljs-selector-attr">[Code Root Fixup: 0.0 ms]</span><br>   <span class="hljs-selector-attr">[Code Root Purge: 0.0 ms]</span><br>   <span class="hljs-selector-attr">[Clear CT: 0.2 ms]</span>   <span class="hljs-comment">// 清空 CardTable 耗时，RS 是依赖 CardTable 记录区域存活对象的</span><br>   <span class="hljs-selector-attr">[Other: 3.9 ms]</span><br>      <span class="hljs-selector-attr">[Choose CSet: 0.0 ms]</span>   <span class="hljs-comment">// 选取 CSet</span><br>      <span class="hljs-selector-attr">[Ref Proc: 3.2 ms]</span>   <span class="hljs-comment">// 弱引用、软引用的处理耗时</span><br>      <span class="hljs-selector-attr">[Ref Enq: 0.0 ms]</span>   <span class="hljs-comment">// 弱引用、软引用的入队耗时</span><br>      <span class="hljs-selector-attr">[Redirty Cards: 0.1 ms]</span><br>      <span class="hljs-selector-attr">[Humongous Register: 0.1 ms]</span><br>      <span class="hljs-selector-attr">[Humongous Reclaim: 0.0 ms]</span><br>      <span class="hljs-selector-attr">[Free CSet: 0.2 ms]</span>    <span class="hljs-comment">// 释放被回收区域的耗时</span><br>   <span class="hljs-selector-attr">[Eden: 373.0M(395.0M)-&gt;0.0B(380.0M) Survivors: 1024.0K-&gt;14.0M Heap: 1189.9M(1408.0M)-&gt;830.5M(1408.0M)]</span>   <span class="hljs-comment">// 显示了堆的大小变化, Eden 从 373.0M 下降到 0, Survivors 从 1024.0K 上升到 14.0M，Heap 内存从 1189.9M 下降到  830.5M</span><br> <span class="hljs-selector-attr">[Times: user=0.03 sys=0.00, real=0.03 secs]</span> <br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.708</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.709</span>: <span class="hljs-selector-attr">[GC concurrent-root-region-scan-start]</span>   <span class="hljs-comment">// 根区域扫描</span><br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.713</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.713</span>: <span class="hljs-selector-attr">[GC concurrent-root-region-scan-end, 0.0048903 secs]</span>   <br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.713</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.713</span>: <span class="hljs-selector-attr">[GC concurrent-mark-start]</span>    <span class="hljs-comment">// 并发标记</span><br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.872</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.872</span>: <span class="hljs-selector-attr">[GC concurrent-mark-end, 0.1585816 secs]</span> <br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.933</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.933</span>: <span class="hljs-selector-attr">[GC remark 2021-03-18T07:08:23.933+0000: 13004.933: [Finalize Marking, 0.0002291 secs]</span> <span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.933</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.934</span>: <span class="hljs-selector-attr">[GC ref-proc, 0.0080423 secs]</span> <span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">23.941</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13004.942</span>: <span class="hljs-selector-attr">[Unloading, 0.0703731 secs]</span>, <span class="hljs-number">0.0852099</span> secs]<br> <span class="hljs-selector-attr">[Times: user=0.09 sys=0.00, real=0.09 secs]</span> <br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">24.019</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13005.019</span>: <span class="hljs-selector-attr">[GC cleanup 851M-&gt;764M(1408M), 0.0027544 secs]</span><br> <span class="hljs-selector-attr">[Times: user=0.00 sys=0.00, real=0.00 secs]</span> <br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">24.022</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13005.022</span>: <span class="hljs-selector-attr">[GC concurrent-cleanup-start]</span>   <span class="hljs-comment">// 重新标记又叫最终标记</span><br><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">08</span>:<span class="hljs-number">24.022</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">13005.022</span>: <span class="hljs-selector-attr">[GC concurrent-cleanup-end, 0.0000804 secs]</span><br></code></pre></td></tr></table></figure>
+
+
+
+<h2 id="老年代-Full-GC-日志"><a href="#老年代-Full-GC-日志" class="headerlink" title="老年代 Full GC 日志"></a>老年代 Full GC 日志</h2><figure class="highlight xl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs xl"><span class="hljs-number">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">19</span>T02:<span class="hljs-number">08</span>:<span class="hljs-number">52.178</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">81433.178</span>: [F<span class="hljs-function"><span class="hljs-title">ull</span> GC (Allocation Failure)  1331M-&gt;</span><span class="hljs-number">1190</span>M(<span class="hljs-number">1408</span>M), <span class="hljs-number">0.3951381</span> secs]   <span class="hljs-comment">// Full GC 失败, 其原因是空间分配失败(Allocation Failure)</span><br>   [E<span class="hljs-function"><span class="hljs-title">den</span>: 0.0B(68.0M)-&gt;</span><span class="hljs-number">0.0</span>B(<span class="hljs-number">70.0</span>M) S<span class="hljs-function"><span class="hljs-title">urvivors</span>: 2048.0K-&gt;</span><span class="hljs-number">0.0</span>B H<span class="hljs-function"><span class="hljs-title">eap</span>: 1331.5M(1408.0M)-&gt;</span><span class="hljs-number">1190.0</span>M(<span class="hljs-number">1408.0</span>M)], [M<span class="hljs-function"><span class="hljs-title">etaspace</span>: 595088K-&gt;</span><span class="hljs-number">593735</span>K(<span class="hljs-number">1597440</span>K)]   <span class="hljs-comment">// 显示了堆的大小变化</span><br> [Times: user=<span class="hljs-number">0.40</span> sys=<span class="hljs-number">0.00</span>, <span class="hljs-keyword">real</span>=<span class="hljs-number">0.39</span> secs]    <span class="hljs-comment">// 表示 GC 总共花了 0.39 秒</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>Full GC (Allocation Failure) 的一般原因：老年代存活的对象太多，基本没有被回收。</p>
+</blockquote>
+<h1 id="G1-调优"><a href="#G1-调优" class="headerlink" title="G1 调优"></a>G1 调优</h1><h2 id="避免设置年轻代的大小"><a href="#避免设置年轻代的大小" class="headerlink" title="避免设置年轻代的大小"></a><strong>避免设置年轻代的大小</strong></h2><p>防止使用 -Xmn、-XX:NewRatio 指定年轻代大小，如果指定固定的年轻代大小，则会覆盖最大暂停时间目标，得不偿失。</p>
+<h2 id="期望的最大暂停时间"><a href="#期望的最大暂停时间" class="headerlink" title="期望的最大暂停时间"></a><strong>期望的最大暂停时间</strong></h2><p>权衡延迟与吞吐量。最大暂停时间设置较小，可能需要较大的 GC 开销，反之则只需较小的 GC 开销。</p>
+<h2 id="GC-日志中内存耗尽的信息"><a href="#GC-日志中内存耗尽的信息" class="headerlink" title="GC 日志中内存耗尽的信息"></a>GC 日志中内存耗尽的信息</h2><figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T03:<span class="hljs-number">31</span>:<span class="hljs-number">46</span>.<span class="hljs-number">969</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">7</span>.<span class="hljs-number">969</span>:<span class="hljs-meta"> [GC pause (G1 Evacuation Pause) (young), 0.0376195 secs]</span><br></code></pre></td></tr></table></figure>
+<p>或者</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T07:<span class="hljs-number">03</span>:<span class="hljs-number">34</span>.<span class="hljs-number">443</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">12715</span>.<span class="hljs-number">443</span>:<span class="hljs-meta"> [GC pause (G1 Evacuation Pause) (mixed), 0.0141364 secs]</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>解决该问题的策略：<br>● 增加 -XX:G1ReservePercent，以增加保留的 “to-space” 大小，堆内存一般也相应需要增加。<br>● 降低 -XX:InitiatingHeapOccupancyPercent 来尽早触发标记周期。<br>● 适当加大 -XX:ConcGCThreads 选项的值，增加并发标记的线程数。</p>
+</blockquote>
+<h2 id="巨型对象的内存分配"><a href="#巨型对象的内存分配" class="headerlink" title="巨型对象的内存分配"></a><strong>巨型对象的内存分配</strong></h2><blockquote>
+<p>背景：如果某个对象超过单个 Region 空间的一半，则会被 G1 视为巨型对象，例如大数组和字符串。巨型对象会直接分配到老年代的 Humongous 区。</p>
+</blockquote>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">2021</span>-<span class="hljs-number">03</span>-<span class="hljs-number">18</span>T08:<span class="hljs-number">30</span>:<span class="hljs-number">18</span>.<span class="hljs-number">826</span>+<span class="hljs-number">0000</span>: <span class="hljs-number">17919</span>.<span class="hljs-number">826</span>:<span class="hljs-meta"> [GC pause (G1 Humongous Allocation) (young), 0.0664334 secs]</span><br></code></pre></td></tr></table></figure>
+<p>如果在 GC 日志中，看到由 Humongous 分配触发的大量 GC，导致在老年代形成大量的内存碎片。需要增加 -XX:G1HeapRegionSize，即对象小于 Region 的 50%，让之前的大对象不再被直接分配到 Humongous 区，而是走常规的对象分配方式。</p>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><p><a target="_blank" rel="noopener" href="https://www.redhat.com/en/blog/collecting-and-reading-g1-garbage-collector-logs-part-2?source=author&term=22991">Collecting and reading G1 garbage collector logs</a></p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/JVM/" class="category-chain-item">JVM</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/JVM/">#JVM</a>
+      
+        <a href="/tags/GC/">#GC</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>G1垃圾回收器日志分析</div>
+      <div>https://wulangcode.github.io/2022/11/03/G1垃圾回收器日志分析/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Wu Lang</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年11月3日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/11/ClickHouse%E8%BF%90%E7%BB%B4SQL/" title="ClickHouse运维SQL">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">ClickHouse运维SQL</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/10/22/Java%E6%97%A5%E5%B8%B8%E9%97%AE%E9%A2%98%E8%AF%8A%E6%96%AD%E6%96%B9%E6%B3%95/" title="Java日常问题诊断方法">
+                        <span class="hidden-mobile">Java日常问题诊断方法</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
